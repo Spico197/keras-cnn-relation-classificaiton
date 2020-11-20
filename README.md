@@ -3,7 +3,7 @@ Relation Classification via Convolutional Neural Network
 
 ## Network Structure
 
-Different from (Zeng et al. 2014) edition, I use a extern pre-trained word vector (with a dimension of 300) from Wikipedia instead of their Google News' vector (50 dims). Moreover, I do not add the WordNet features into the model. Besides, the optimizer is `Adam` instead of `SGD`.
+Different from (Zeng et al. 2014) edition, I use a extern pre-trained word vector (with a dimension of 300) from Wikipedia (or you can use GloVe vectors for convinience) instead of their Google News' vector (50 dims). Moreover, I do not add the WordNet features into the model. Besides, the optimizer is `Adam` instead of `SGD`.
 
 
 ![CNN Structure](CNN_Relation_Classification.png)

@@ -1,3 +1,4 @@
+import os
 import re
 import numpy as np
 
@@ -23,16 +24,10 @@ def load_data(filepath):
         sen_list = sen_list.replace("<e2>", " <e2> ")
         sen_list = sen_list.replace("</e2>", " </e2> ")
         sen_list.strip()
-        if config.WORD2VEC_MODEL == "google_news":
-            for ch in '!"#$%&()*+,-.:;=?@[\]^_`{|}~':
-                if ch in sen_list:
-                    sen_list = sen_list.replace(ch, ' ')
-        elif config.WORD2VEC_MODEL == "wiki":
-            for ch in '.!"#$%&()*+,-:;=?@[\]^_`{|}~':
-                if ch in sen_list:
-                    sen_list = sen_list.replace(ch, " {} ".format(ch))
+        for ch in '.!"#$%&()*+,-:;=?@[\]^_`{|}~':
+            if ch in sen_list:
+                sen_list = sen_list.replace(ch, " {} ".format(ch))
         sen_list = sen_list.split()
-
         e1_pos = sen_list.index('<e1>') + 1
         e2_pos = sen_list.index('<e2>') + 1
         e1_left = ""; e1_right = ""; e2_left = ""; e2_right = ""
@@ -56,7 +51,7 @@ def load_data(filepath):
         sen_list.remove("</e1>")
         sen_list.remove("<e2>")
         sen_list.remove("</e2>")
-        e1_pos -= 1; e2_pos -= 1
+        e1_pos -= 1; e2_pos -= 3
 
         data.append({"id": match.group(1).strip(), "sentence": " ".join(sen_list), "sen_list": sen_list,
             "e1": match.group(3).strip(), "e2": match.group(4).strip(), "e1_pos": e1_pos, "e2_pos": e2_pos,
@@ -70,51 +65,38 @@ def preprocessing(filepath, wordvec_index):
 
     data = load_data(filepath)
     labels = [x['relation'] for x in data]
-    
-    token_mat = []; pos_mat1 = []; pos_mat2 = []
-    token_indexes = np.zeros((1, config.MAX_TOKEN_LENGTH))
-    pos_val1 = np.zeros((1, config.MAX_TOKEN_LENGTH))
-    pos_val2 = np.zeros((1, config.MAX_TOKEN_LENGTH))
 
-    for item in data:
-        token_indexes[0, :len(item['sen_list'])] = [get_vectorid_by_word(word, wordvec_index) for word in item['sen_list']]
-        pos_val1[0, :config.MAX_TOKEN_LENGTH] = [i - int(item['e1_pos']) for i in range(0, config.MAX_TOKEN_LENGTH)]
-        pos_val2[0, :config.MAX_TOKEN_LENGTH] = [i - int(item['e2_pos']) for i in range(0, config.MAX_TOKEN_LENGTH)]
-    
-        token_mat.append(token_indexes)
-        pos_mat1.append(pos_val1)
-        pos_mat2.append(pos_val2)
+    token_indexes = np.zeros((len(data), config.MAX_TOKEN_LENGTH))
+    pos_val1 = np.zeros((len(data), config.MAX_TOKEN_LENGTH))
+    pos_val2 = np.zeros((len(data), config.MAX_TOKEN_LENGTH))
 
-    return {"labels": np.array(labels), "token_mat": np.array(token_mat, dtype='int32'), 
-            "pos_mat1": np.array(pos_mat1, dtype='int32'), "pos_mat2": np.array(pos_mat2, dtype='int32')}
+    for idx, item in enumerate(data):
+        token_indexes[idx, :len(item['sen_list'])] = [get_vectorid_by_word(word, wordvec_index) for word in item['sen_list']]
+        pos_val1[idx] = [abs(i - int(item['e1_pos'])) for i in range(0, config.MAX_TOKEN_LENGTH)]
+        pos_val2[idx] = [abs(i - int(item['e2_pos'])) for i in range(0, config.MAX_TOKEN_LENGTH)]
+
+    return {"labels": np.array(labels), "token_mat": token_indexes, 
+            "pos_mat1": pos_val1, "pos_mat2": pos_val2}
 
 def main():
     from sklearn.preprocessing import LabelEncoder
     import pickle
 
-    print("-"*20 + " " + config.WORD2VEC_MODEL + " word2vec model is loading " + "-"*20)
-
+    print("-"*20 + " " + config.WORD2VEC_MODEL + " embedding model is loading " + "-"*20)
+    os.makedirs("preprocessed_data", exist_ok=True)
     try:
-        with open("preprocessed_data/wiki_word2vec.ext", 'rb') as file:
+        with open("preprocessed_data/word.vec", 'rb') as file:
             word2vec = pickle.load(file)
             wordvec_index = word2vec['wordvec_index']
             word_vectors = word2vec['word_vectors']
     except:
         wordvec_index, word_vectors = load_word2vec()
         word2vec = {"wordvec_index": wordvec_index, "word_vectors": word_vectors}
-        with open("preprocessed_data/wiki_word2vec", 'wb') as file:
+        with open("preprocessed_data/word.vec", 'wb') as file:
             pickle.dump(word2vec, file)
 
     train_set = preprocessing(config.TRAIN_DATA_PATH, wordvec_index)
     test_set = preprocessing(config.TEST_DATA_PATH, wordvec_index)
-
-    train_set['token_mat'] = train_set['token_mat'].reshape((train_set['token_mat'].shape[0], train_set['token_mat'].shape[2]))
-    train_set['pos_mat1'] = train_set['pos_mat1'].reshape((train_set['pos_mat1'].shape[0], train_set['pos_mat1'].shape[2]))
-    train_set['pos_mat2'] = train_set['pos_mat2'].reshape((train_set['pos_mat2'].shape[0], train_set['pos_mat2'].shape[2]))
-    test_set['token_mat'] = test_set['token_mat'].reshape((test_set['token_mat'].shape[0], test_set['token_mat'].shape[2]))
-    test_set['pos_mat1'] = test_set['pos_mat1'].reshape((test_set['pos_mat1'].shape[0], test_set['pos_mat1'].shape[2]))
-    test_set['pos_mat2'] = test_set['pos_mat2'].reshape((test_set['pos_mat2'].shape[0], test_set['pos_mat2'].shape[2]))
-
 
     lbe = LabelEncoder()
     lbe.fit(train_set['labels'])
