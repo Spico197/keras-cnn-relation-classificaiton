@@ -30,6 +30,6 @@ class Config(object):
         self.LEARNING_RATE = 0.001
         self.MAX_TOKEN_LENGTH = 97
         self.BATCH_SIZE = 64
-        self.EPOCHS_NUMBER = 100
+        self.EPOCHS_NUMBER = 10
 
 config = Config(word2vec_model='glove')

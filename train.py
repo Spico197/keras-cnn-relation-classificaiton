@@ -40,15 +40,15 @@ output = Convolution1D(filters=config.FILTER_NUMBER,
                         strides=1)(output)
 output = GlobalMaxPooling1D()(output)
 output = Dropout(config.DROP_VAL)(output)
-output = Dense(config.HIDDEN_LAYER1, activation='tanh')(output)
-output = Dropout(config.DROP_VAL)(output)
-output = Dense(config.HIDDEN_LAYER2, activation='tanh')(output)
-output = Dropout(config.DROP_VAL)(output)
+# output = Dense(config.HIDDEN_LAYER1, activation='tanh')(output)
+# output = Dropout(config.DROP_VAL)(output)
+# output = Dense(config.HIDDEN_LAYER2, activation='tanh')(output)
+# output = Dropout(config.DROP_VAL)(output)
 output = Dense(out_number, activation='softmax')(output)
 
 model = Model(inputs=[token_input, distance1_input, distance2_input], outputs=[output])
 model.compile(loss='sparse_categorical_crossentropy', 
-                optimizer='sgd',
+                optimizer='adam',
                 metrics=['acc'])
 model.summary()
 
@@ -117,5 +117,5 @@ with open("preprocessed_data/result.pkl", 'wb') as file:
         "macrof1s": macrof1s
     }
     pickle.dump(result, file)
-plot_model(model, to_file="{}.png".format("CNN Relation Classification"), show_shapes=True)
 model.save(config.MODEL_SAVE_PATH)
+plot_model(model, to_file="{}.png".format("CNN Relation Classification"), show_shapes=True)
